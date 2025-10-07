@@ -50,7 +50,7 @@ app.get('/api/health', (req, res) => {
 // Register
 app.post('/api/register', async (req, res) => {
   try {
-    const { name, username, email, password } = req.body;
+    const { name, username, email, password, role = 'user' } = req.body;
 
     // Check if database is available
     const dbConnected = await testDatabaseConnection();
@@ -72,8 +72,8 @@ app.post('/api/register', async (req, res) => {
 
       // Insert user
       const result = await pool.query(
-        'INSERT INTO users (name, username, email, password) VALUES ($1, $2, $3, $4) RETURNING id, name, username, email',
-        [name, username, email, hashedPassword]
+        'INSERT INTO users (name, username, email, password, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, username, email, role',
+        [name, username, email, hashedPassword, role]
       );
 
       const user = result.rows[0];
@@ -87,7 +87,7 @@ app.post('/api/register', async (req, res) => {
 
       res.status(201).json({
         message: 'Usuário criado com sucesso',
-        user: { id: user.id, name: user.name, username: user.username, email: user.email },
+        user: { id: user.id, name: user.name, username: user.username, email: user.email, role: user.role },
         token
       });
     } else {
@@ -108,6 +108,7 @@ app.post('/api/register', async (req, res) => {
         name,
         username,
         email,
+        role,
         password: hashedPassword
       };
       
@@ -122,7 +123,7 @@ app.post('/api/register', async (req, res) => {
 
       res.status(201).json({
         message: 'Usuário criado com sucesso (em memória)',
-        user: { id: user.id, name: user.name, username: user.username, email: user.email },
+        user: { id: user.id, name: user.name, username: user.username, email: user.email, role: user.role },
         token
       });
     }
@@ -202,7 +203,7 @@ app.post('/api/login', async (req, res) => {
 
     res.json({
       message: 'Login realizado com sucesso',
-      user: { id: user.id, name: user.name, username: user.username, email: user.email },
+      user: { id: user.id, name: user.name, username: user.username, email: user.email, role: user.role },
       token
     });
   } catch (err) {
@@ -224,6 +225,142 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Get all users (protected route)
+app.get('/api/users', async (req, res) => {
+  try {
+    // Check if database is available
+    const dbConnected = await testDatabaseConnection();
+    
+    if (dbConnected) {
+      // Get all users from database
+      const result = await pool.query(
+        'SELECT id, name, username, email, role, created_at FROM users ORDER BY created_at DESC'
+      );
+
+      res.json({
+        users: result.rows
+      });
+    } else {
+      // Return in-memory users
+      res.json({
+        users: inMemoryUsers.map(user => ({
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          created_at: new Date().toISOString()
+        }))
+      });
+    }
+  } catch (err) {
+    console.error('❌ Erro ao buscar usuários:', err.message);
+    res.status(500).json({ 
+      message: 'Erro interno do servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : 'Erro interno'
+    });
+  }
+});
+
+// Update user (protected route)
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name, username, email, role } = req.body
+
+    // Check if database is available
+    const dbConnected = await testDatabaseConnection()
+    
+    if (dbConnected) {
+      // Update user in database
+      const result = await pool.query(
+        'UPDATE users SET name = $1, username = $2, email = $3, role = $4 WHERE id = $5 RETURNING id, name, username, email, role, created_at',
+        [name, username, email, role, id]
+      )
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: 'Usuário não encontrado' })
+      }
+
+      res.json({
+        message: 'Usuário atualizado com sucesso',
+        user: result.rows[0]
+      })
+    } else {
+      // Update in-memory user
+      const userIndex = inMemoryUsers.findIndex(user => user.id === parseInt(id))
+      
+      if (userIndex === -1) {
+        return res.status(404).json({ message: 'Usuário não encontrado' })
+      }
+
+      inMemoryUsers[userIndex] = {
+        ...inMemoryUsers[userIndex],
+        name,
+        username,
+        email,
+        role
+      }
+
+      res.json({
+        message: 'Usuário atualizado com sucesso (em memória)',
+        user: inMemoryUsers[userIndex]
+      })
+    }
+  } catch (err) {
+    console.error('❌ Erro ao atualizar usuário:', err.message)
+    res.status(500).json({ 
+      message: 'Erro interno do servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : 'Erro interno'
+    })
+  }
+})
+
+// Delete user (protected route)
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    // Check if database is available
+    const dbConnected = await testDatabaseConnection()
+    
+    if (dbConnected) {
+      // Delete user from database
+      const result = await pool.query(
+        'DELETE FROM users WHERE id = $1 RETURNING id',
+        [id]
+      )
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: 'Usuário não encontrado' })
+      }
+
+      res.json({
+        message: 'Usuário excluído com sucesso'
+      })
+    } else {
+      // Delete in-memory user
+      const userIndex = inMemoryUsers.findIndex(user => user.id === parseInt(id))
+      
+      if (userIndex === -1) {
+        return res.status(404).json({ message: 'Usuário não encontrado' })
+      }
+
+      inMemoryUsers.splice(userIndex, 1)
+
+      res.json({
+        message: 'Usuário excluído com sucesso (em memória)'
+      })
+    }
+  } catch (err) {
+    console.error('❌ Erro ao excluir usuário:', err.message)
+    res.status(500).json({ 
+      message: 'Erro interno do servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : 'Erro interno'
+    })
+  }
+})
+
 // Verify token
 app.get('/api/verify', async (req, res) => {
   try {
@@ -242,7 +379,7 @@ app.get('/api/verify', async (req, res) => {
     
     if (dbConnected) {
       const result = await pool.query(
-        'SELECT id, name, username, email FROM users WHERE id = $1',
+        'SELECT id, name, username, email, role FROM users WHERE id = $1',
         [decoded.userId]
       );
 
@@ -260,7 +397,7 @@ app.get('/api/verify', async (req, res) => {
       }
     }
 
-    res.json({ user: { id: user.id, name: user.name, username: user.username, email: user.email } });
+    res.json({ user: { id: user.id, name: user.name, username: user.username, email: user.email, role: user.role } });
   } catch (err) {
     console.error('❌ Erro na verificação do token:', err.message);
     console.error('Stack trace:', err.stack);

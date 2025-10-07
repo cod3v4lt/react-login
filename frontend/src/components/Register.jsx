@@ -94,7 +94,8 @@ const Register = () => {
     const result = await register(formData.name, formData.email, formData.password, formData.username)
     
     if (result.success) {
-      navigate('/')
+      // Redirect to dashboard instead of home
+      navigate('/dashboard')
     } else {
       setError(result.message)
     }

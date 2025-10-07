@@ -21,13 +21,23 @@ react-auth-app/
 │   ├── .gitignore
 │   ├── .env                  # Variáveis de ambiente
 │   ├── src/
-│   │   ├── components/
+│   │   ├── components/       # Componentes reutilizáveis
 │   │   │   ├── Home.jsx
 │   │   │   ├── Login.jsx
 │   │   │   ├── Navbar.jsx
-│   │   │   └── Register.jsx
+│   │   │   ├── Register.jsx
+│   │   │   ├── ProtectedRoute.jsx
+│   │   │   ├── AdminRoute.jsx
+│   │   │   └── DashboardSidebar.jsx
 │   │   ├── context/
 │   │   │   └── AuthContext.jsx
+│   │   ├── pages/            # Páginas da aplicação
+│   │   │   ├── dashboard/    # Páginas protegidas do dashboard
+│   │   │   │   ├── DashboardHome.jsx
+│   │   │   │   ├── DashboardLayout.jsx
+│   │   │   │   ├── Profile.jsx
+│   │   │   │   ├── Settings.jsx
+│   │   │   │   └── Users.jsx
 │   │   ├── main.jsx
 │   │   ├── App.jsx
 │   │   └── index.css
@@ -39,8 +49,21 @@ react-auth-app/
 │   ├── .env                  # Variáveis de ambiente
 │   ├── config/
 │   │   └── database.js
+│   ├── models/
+│   │   └── User.js
+│   ├── migrations/           # Scripts de migração do banco de dados
+│   │   ├── add-username-column.sql
+│   │   ├── add-roles-column.sql
+│   │   ├── run-migration.js
+│   │   └── run-roles-migration.js
+│   ├── init-db.js            # Script de inicialização do banco de dados
 │   └── ENV_SETUP.md
 ├── package.json             # Scripts principais
+├── ecosystem.config.js      # Configuração do PM2
+├── nginx.conf               # Configuração do Nginx
+├── deploy.sh                # Script de deployment
+├── health-check.sh          # Script de verificação de saúde
+├── backup-db.sh             # Script de backup do banco de dados
 ├── .gitignore              # Git ignore global
 └── README.md
 ```
@@ -71,13 +94,19 @@ react-auth-app/
 4. **Configure as variáveis de ambiente**
    Crie um arquivo `.env` na pasta `backend/` com as seguintes variáveis:
    ```env
-   DB_USER=postgres
-   DB_HOST=localhost
-   DB_NAME=react_auth_db
-   DB_PASSWORD=sua_senha_do_postgres
-   DB_PORT=5432
+   POSTGRES_HOST=localhost
+   POSTGRES_PORT=5432
+   POSTGRES_USER=seu_usuario_postgres
+   POSTGRES_PASSWORD=sua_senha_do_postgres
+   POSTGRES_NAME=react_auth_db
    JWT_SECRET=sua_chave_secreta_jwt
-   PORT=5000
+   PORT=5004
+   ```
+
+   E na pasta `frontend/`, crie um arquivo `.env`:
+   ```env
+   VITE_APP_TITLE=React Auth App
+   VITE_API_URL=http://localhost:5004
    ```
 
 ## 🚀 Como Executar
@@ -101,7 +130,7 @@ cd backend && npm run dev
 ```bash
 npm run frontend
 # ou
-cd frontend && npm start
+cd frontend && npm run dev
 ```
 
 ### Produção
@@ -112,21 +141,26 @@ npm start      # Inicia o backend
 
 ## 🔧 Funcionalidades
 
-- ✅ **Registro de usuários** com validação
+- ✅ **Registro de usuários** com validação (incluindo campo de nome de usuário)
 - ✅ **Login** com autenticação JWT
 - ✅ **Interface responsiva** com Bootstrap
 - ✅ **Proteção de rotas** baseada em autenticação
 - ✅ **Criptografia de senhas** com bcrypt
 - ✅ **Validação de formulários** no frontend e backend
 - ✅ **Design moderno** com ícones e gradientes
+- ✅ **Área administrativa** com gerenciamento de usuários
+- ✅ **Controle de acesso baseado em roles** (admin/user)
+- ✅ **Dashboard personalizado** para usuários logados
 
 ## 🎨 Interface
 
 A aplicação possui uma interface moderna e responsiva com:
 - **Página Home**: Apresentação da aplicação com recursos destacados
 - **Formulário de Login**: Autenticação de usuários existentes
-- **Formulário de Registro**: Criação de novas contas
+- **Formulário de Registro**: Criação de novas contas com campo de nome de usuário
 - **Navbar**: Navegação com status de autenticação
+- **Dashboard**: Área protegida para usuários logados
+- **Área administrativa**: Gerenciamento de usuários (apenas para admins)
 - **Design responsivo**: Funciona em desktop, tablet e mobile
 
 ## 🔒 Segurança
@@ -135,6 +169,8 @@ A aplicação possui uma interface moderna e responsiva com:
 - Tokens JWT para autenticação
 - Validação de dados no frontend e backend
 - Proteção contra ataques comuns
+- Controle de acesso baseado em roles
+- Proteção de rotas sensíveis
 
 ## 📱 Responsividade
 
@@ -145,25 +181,147 @@ A aplicação é totalmente responsiva e funciona perfeitamente em:
 
 ## 🌐 URLs da Aplicação
 
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000
+- **Frontend**: http://localhost:3004
+- **Backend API**: http://localhost:5004
 - **Endpoints da API**:
   - `POST /api/register` - Registro de usuário
   - `POST /api/login` - Login de usuário
   - `GET /api/verify` - Verificação de token
+  - `GET /api/users` - Listagem de usuários (apenas admins)
+  - `PUT /api/users/:id` - Atualização de usuário (apenas admins)
+  - `DELETE /api/users/:id` - Exclusão de usuário (apenas admins)
 
-## 🚀 Deploy
+## 🚀 Deploy com PM2
 
-Para fazer deploy da aplicação:
+PM2 é um gerenciador de processos para aplicações Node.js que mantém sua aplicação online.
 
-1. **Build do frontend**:
+### Instalação do PM2
+```bash
+npm install -g pm2
+```
+
+### Configuração do PM2 para o Backend
+
+1. **Arquivo de configuração**:
+   O projeto já inclui um arquivo `ecosystem.config.js` configurado para o deployment.
+
+2. **Inicie a aplicação com PM2:**
    ```bash
-   npm run build
+   npm run pm2:start
    ```
 
-2. **Configure o servidor de produção** com as variáveis de ambiente adequadas
+3. **Comandos úteis do PM2:**
+   ```bash
+   npm run pm2:status        # Listar aplicações
+   npm run pm2:logs          # Ver logs
+   npm run pm2:restart       # Reiniciar a aplicação
+   npm run pm2:stop          # Parar a aplicação
+   npm run pm2:delete        # Deletar a aplicação
+   ```
 
-3. **Configure o banco de dados PostgreSQL** no ambiente de produção
+4. **Configurar PM2 para iniciar automaticamente:**
+   ```bash
+   pm2 startup           # Gerar comando de inicialização
+   pm2 save              # Salvar configuração atual
+   ```
+
+## 🌐 Deploy com Nginx
+
+Nginx é um servidor web que pode ser usado como proxy reverso para sua aplicação.
+
+### Instalação do Nginx
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install nginx
+
+# CentOS/RHEL
+sudo yum install nginx
+```
+
+### Configuração do Nginx
+
+1. **Use o arquivo de configuração fornecido:**
+   ```bash
+   sudo cp nginx.conf /etc/nginx/sites-available/react-auth-app
+   ```
+
+2. **Habilite o site:**
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/react-auth-app /etc/nginx/sites-enabled/
+   ```
+
+3. **Teste a configuração:**
+   ```bash
+   sudo nginx -t
+   ```
+
+4. **Reinicie o Nginx:**
+   ```bash
+   sudo systemctl restart nginx
+   ```
+
+## 🔐 Configuração SSL com Let's Encrypt
+
+Para adicionar HTTPS à sua aplicação:
+
+1. **Instale o Certbot:**
+   ```bash
+   sudo apt install certbot python3-certbot-nginx
+   ```
+
+2. **Obtenha um certificado SSL:**
+   ```bash
+   sudo certbot --nginx -d seu-dominio.com -d www.seu-dominio.com
+   ```
+
+3. **Configure a renovação automática:**
+   ```bash
+   sudo crontab -e
+   # Adicione esta linha:
+   0 12 * * * /usr/bin/certbot renew --quiet
+   ```
+
+## 📦 Scripts de Migração do Banco de Dados
+
+O projeto inclui scripts para migração do banco de dados:
+
+1. **Executar migração inicial (adicionar coluna username):**
+   ```bash
+   cd backend
+   npm run migrate
+   ```
+
+2. **Executar migração de roles:**
+   ```bash
+   cd backend
+   npm run migrate:roles
+   ```
+
+3. **Inicializar o banco de dados:**
+   ```bash
+   cd backend
+   npm run init-db
+   ```
+
+## 🛠️ Scripts de Manutenção
+
+O projeto inclui vários scripts úteis para manutenção:
+
+1. **Deploy da aplicação:**
+   ```bash
+   ./deploy.sh
+   ```
+
+2. **Verificação de saúde:**
+   ```bash
+   ./health-check.sh
+   ```
+
+3. **Backup do banco de dados:**
+   ```bash
+   ./backup-db.sh
+   ```
 
 ## 🤝 Contribuição
 
