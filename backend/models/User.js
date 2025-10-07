@@ -20,7 +20,7 @@ class User {
   static async findById(id) {
     try {
       const result = await pool.query(
-        'SELECT id, name, username, email, created_at FROM users WHERE id = $1',
+        'SELECT id, name, username, email, role, created_at FROM users WHERE id = $1',
         [id]
       );
       return result.rows[0] || null;
@@ -32,7 +32,7 @@ class User {
 
   // Criar novo usuário
   static async create(userData) {
-    const { name, username, email, password } = userData;
+    const { name, username, email, password, role = 'user' } = userData;
     
     try {
       // Verificar se usuário já existe
@@ -47,8 +47,8 @@ class User {
 
       // Inserir usuário
       const result = await pool.query(
-        'INSERT INTO users (name, username, email, password) VALUES ($1, $2, $3, $4) RETURNING id, name, username, email, created_at',
-        [name, username, email, hashedPassword]
+        'INSERT INTO users (name, username, email, password, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, username, email, role, created_at',
+        [name, username, email, hashedPassword, role]
       );
 
       return result.rows[0];
@@ -70,12 +70,12 @@ class User {
 
   // Atualizar usuário
   static async update(id, userData) {
-    const { name, username, email } = userData;
+    const { name, username, email, role } = userData;
     
     try {
       const result = await pool.query(
-        'UPDATE users SET name = $1, username = $2, email = $3 WHERE id = $4 RETURNING id, name, username, email, created_at',
-        [name, username, email, id]
+        'UPDATE users SET name = $1, username = $2, email = $3, role = $4 WHERE id = $5 RETURNING id, name, username, email, role, created_at',
+        [name, username, email, role, id]
       );
       return result.rows[0] || null;
     } catch (err) {
