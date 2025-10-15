@@ -106,7 +106,7 @@ react-auth-app/
    E na pasta `frontend/`, crie um arquivo `.env`:
    ```env
    VITE_APP_TITLE=React Auth App
-   VITE_API_URL=http://localhost:5004
+   VITE_API_URL=http://localhost:5003
    ```
 
 ## 🚀 Como Executar
