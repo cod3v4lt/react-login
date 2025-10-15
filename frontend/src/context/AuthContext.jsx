@@ -49,7 +49,7 @@ export const AuthProvider = ({ children }) => {
       setUser(userData)
       return { success: true }
     } catch (error) {
-      return { 
+      return {         
         success: false, 
         message: error.response?.data?.message || 'Erro no login' 
       }

@@ -12,19 +12,14 @@ const pool = new Pool({
   port: process.env.POSTGRES_PORT || 5432,
 });
 
-// Test database connection and handle errors gracefully
-const testConnection = async () => {
-  try {
-    const client = await pool.connect();
-    console.log('✅ Conexão com o banco de dados estabelecida com sucesso');
-    client.release();
-    return true;
-  } catch (err) {
-    console.error('❌ Erro ao conectar com o banco de dados:', err.message);
-    console.error('🔧 Verifique as configurações de conexão no arquivo .env');
-    return false;
+// Testar conexão uma vez ao iniciar
+pool.query('SELECT NOW()', (err) => {
+  if (err) {
+    console.error('❌ Falha ao conectar ao banco de dados:', err.message);
+    process.exit(1); // Pára a aplicação se não houver DB
+  } else {
+    console.log('✅ Conectado ao PostgreSQL');
   }
-};
+});
 
 export default pool;
-export { testConnection };
