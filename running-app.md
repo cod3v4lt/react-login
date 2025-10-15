@@ -1,7 +1,14 @@
-# react-login-v2 — WSL (Debian) + PM2
+# React Login — WSL (Debian) + PM2
+
+Acesse `http://localhost:3003`
 
 Resumo curto: instruções para rodar em desenvolvimento o **frontend React (porta 3003)** e a **API Node (porta 5003)** dentro do WSL Debian, gerenciados pelo **PM2**. Inclui instalação, comandos PM2, troubleshooting e um `ecosystem.config.js` de exemplo.
 
+Pasta local: 
+```bash
+/mnt/d/myProjects/web-apps/js/react/react-login
+D:\myProjects\web-apps\js\react\react-login
+```
 ---
 
 ## Pré-requisitos
@@ -16,7 +23,7 @@ Resumo curto: instruções para rodar em desenvolvimento o **frontend React (por
 ## Estrutura sugerida (exemplo)
 
 ```
-/mnt/d/myProjects/projects/js-apps/react-apps/react-login-v2
+/mnt/d/myProjects/web-apps/js/react/react-login
 ├─ backend/        # Node API (porta 5003)
 └─ frontend/       # React (Vite)  (porta 3003)
 ```
@@ -64,12 +71,12 @@ npm install -g pm2
 
 ```bash
 # Frontend (entre na pasta frontend antes)
-cd /mnt/d/.../react-login-v2/frontend
-pm2 start npm --name react-login-v2-frontend -- run dev
+cd /mnt/d/myProjects/web-apps/js/react/react-login/frontend
+pm2 start npm --name react-login-frontend -- run dev
 
 # Backend
-cd /mnt/d/.../react-login-v2/backend
-pm2 start npm --name react-login-v2-backend -- run dev
+cd /mnt/d/myProjects/web-apps/js/react/react-login/backend
+pm2 start npm --name react-login-backend -- run dev
 ```
 
 ### Opção B — usando --prefix (sem cd)
@@ -81,6 +88,11 @@ pm2 start npm --name react-login-v2-backend  --prefix /mnt/d/.../react-login-v2/
 
 > Observação: o `--prefix` funciona, mas tome cuidado com scripts que tentem acessar pastas relativas (ex.: um `concurrently` que invoque `frontend`/`backend` a partir de outro cwd pode gerar `ENOENT`).
 
+## Salvar e reiniciar o pm2 ao fechar o WSL
+```bash
+pm2 save # opcional usar --force
+pm2 startup
+```
 ---
 
 ## Deletar / renomear processos (ex.: você criou com nome errado)
@@ -97,6 +109,7 @@ Deletar por nome ou id:
 pm2 delete react-login-v2-frontend
 # ou
 pm2 delete 0
+pm2 save # opcional usar --force
 ```
 
 Recriar com o nome correto (exemplo):
@@ -182,15 +195,15 @@ Se o WSL não usar systemd, usar `pm2 resurrect` manualmente ao abrir a sessão 
 module.exports = {
   apps: [
     {
-      name: 'react-login-v2-backend',
-      cwd: '/mnt/d/myProjects/projects/js-apps/react-apps/react-login-v2/backend',
+      name: 'react-login-backend',
+      cwd: '/mnt/d/myProjects/web-apps/js/react/react-login/backend',
       script: 'npm',
       args: 'run dev',
       watch: false
     },
     {
-      name: 'react-login-v2-frontend',
-      cwd: '/mnt/d/myProjects/projects/js-apps/react-apps/react-login-v2/frontend',
+      name: 'react-login-frontend',
+      cwd: '/mnt/d/myProjects/web-apps/js/react/react-login/frontend',
       script: 'npm',
       args: 'run dev',
       watch: false
