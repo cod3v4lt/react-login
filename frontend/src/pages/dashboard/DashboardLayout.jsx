@@ -1,10 +1,11 @@
-import { Col, Container, Row } from 'react-bootstrap'
-import { Outlet } from 'react-router-dom'
-import DashboardSidebar from '../../components/DashboardSidebar'
-import { useAuth } from '../../context/AuthContext'
+// src/pages/dashboard/DashboardLayout.jsx
+import { Col, Container, Row } from 'react-bootstrap';
+import { Outlet } from 'react-router-dom';
+import DashboardSidebar from '../../components/DashboardSidebar';
+import { useAuth } from '../../context/AuthContext';
 
 const DashboardLayout = () => {
-  const { user, logout } = useAuth()
+  const { user, logout } = useAuth();
 
   return (
     <Container fluid className="py-4">
@@ -21,12 +22,8 @@ const DashboardLayout = () => {
             </div>
             <DashboardSidebar />
             <hr className="my-4" />
-            <button 
-              className="btn btn-outline-danger w-100"
-              onClick={logout}
-            >
-              <i className="bi bi-box-arrow-right me-2"></i>
-              Sair
+            <button className="btn btn-outline-danger w-100" onClick={logout}>
+              <i className="bi bi-box-arrow-right me-2"></i>Sair
             </button>
           </div>
         </Col>
@@ -35,7 +32,7 @@ const DashboardLayout = () => {
         </Col>
       </Row>
     </Container>
-  )
-}
+  );
+};
 
-export default DashboardLayout
+export default DashboardLayout;

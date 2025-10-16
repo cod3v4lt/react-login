@@ -91,7 +91,8 @@ pm2 start npm --name react-login-v2-backend  --prefix /mnt/d/.../react-login-v2/
 ## Salvar e reiniciar o pm2 ao fechar o WSL
 ```bash
 pm2 save # opcional usar --force
-pm2 startup
+pm2 startup 
+pm2 resurrect # Ao reiniciar o PC/WSL
 ```
 ---
 
