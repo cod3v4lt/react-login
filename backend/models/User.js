@@ -3,7 +3,7 @@ import pool from '../config/database.js';
 import bcrypt from 'bcryptjs';
 
 class User {
-  // Buscar todos os usuários
+    // Buscar todos os usuários
     static async findAll() {
         try {
             const result = await pool.query(
@@ -41,31 +41,22 @@ class User {
     }
 
     // Criar novo usuário
+    // models/User.js — trecho do create
     static async create(userData) {
-        const { name, username, email, password, status = 1 } = userData; // status padrão: 1 (ativo)
+        const { name, username, email, password, status = 1 } = userData;
+        if (!password) throw new Error('Senha é obrigatória');
 
-        if (!password) {
-            throw new Error('Senha é obrigatória');
-        }
+        const existing = await this.findByEmail(email);
 
-        try {
-            const existingUser = await this.findByEmail(email);
-            if (existingUser) {
-                throw new Error('Usuário já existe');
-            }
+        if (existing) throw new Error('Usuário já existe');
 
-            const hashedPassword = await bcrypt.hash(password, 10);
-
-            const result = await pool.query(
-                'INSERT INTO users (name, username, email, password, status) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, username, email, status, created_at',
-                [name, username, email, hashedPassword, status]
-            );
-
-            return result.rows[0];
-        } catch (err) {
-            console.error('Erro ao criar usuário:', err);
-            throw err;
-        }
+        const hashed = await bcrypt.hash(password, 10);
+        
+        const result = await pool.query(
+            'INSERT INTO users (name, username, email, password, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [name, username, email, hashed, status]
+        );
+        return result.rows[0];
     }
 
     // Verificar senha
@@ -80,13 +71,41 @@ class User {
 
     // Atualizar usuário
     static async update(id, userData) {
-        const { name, username, email, status } = userData;
+        const { name, username, email, password, status } = userData;
 
         try {
-            const result = await pool.query(
-                'UPDATE users SET name = $1, username = $2, email = $3, status = $4, updated_at = NOW() WHERE id = $5 RETURNING id, name, username, email, status, created_at',
-                [name, username, email, status, id]
-            );
+            let query = 'UPDATE users SET ';
+            const sets = [];
+            const values = [];
+
+            if (name !== undefined) {
+                sets.push(`name = $${sets.length + 1}`);
+                values.push(name);
+            }
+            if (username !== undefined) {
+                sets.push(`username = $${sets.length + 1}`);
+                values.push(username);
+            }
+            if (email !== undefined) {
+                sets.push(`email = $${sets.length + 1}`);
+                values.push(email);
+            }
+            if (password !== undefined) {
+                const hashed = await bcrypt.hash(password, 10);
+                sets.push(`password = $${sets.length + 1}`);
+                values.push(hashed);
+            }
+            if (status !== undefined) {
+                sets.push(`status = $${sets.length + 1}`);
+                values.push(status);
+            }
+
+            sets.push('updated_at = NOW()');
+            values.push(id);
+
+            query += sets.join(', ') + ` WHERE id = $${values.length} RETURNING *`;
+
+            const result = await pool.query(query, values);
             return result.rows[0] || null;
         } catch (err) {
             console.error('Erro ao atualizar usuário:', err);
