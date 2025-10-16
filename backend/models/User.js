@@ -1,102 +1,128 @@
+// models/User.js
 import pool from '../config/database.js';
 import bcrypt from 'bcryptjs';
 
 class User {
-  // Buscar usuário por email
-  static async findByEmail(email) {
-    try {
-      const result = await pool.query(
-        'SELECT * FROM users WHERE email = $1',
-        [email]
-      );
-      return result.rows[0] || null;
-    } catch (err) {
-      console.error('Erro ao buscar usuário por email:', err);
-      throw err;
+    // Buscar todos os usuários
+    static async findAll() {
+        try {
+            const result = await pool.query(
+                'SELECT id, name, username, email, status, created_at FROM users ORDER BY created_at DESC'
+            );
+            return result.rows;
+        } catch (err) {
+            console.error('Erro ao buscar todos os usuários:', err);
+            throw err;
+        }
     }
-  }
-
-  // Buscar usuário por ID
-  static async findById(id) {
-    try {
-      const result = await pool.query(
-        'SELECT id, name, username, email, role, created_at FROM users WHERE id = $1',
-        [id]
-      );
-      return result.rows[0] || null;
-    } catch (err) {
-      console.error('Erro ao buscar usuário por ID:', err);
-      throw err;
+    // Buscar usuário por email
+    static async findByEmail(email) {
+        try {
+            const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+            return result.rows[0] || null;
+        } catch (err) {
+            console.error('Erro ao buscar usuário por email:', err);
+            throw err;
+        }
     }
-  }
 
-  // Criar novo usuário
-  static async create(userData) {
-    const { name, username, email, password, role = 'user' } = userData;
-    
-    try {
-      // Verificar se usuário já existe
-      const existingUser = await this.findByEmail(email);
-      if (existingUser) {
-        throw new Error('Usuário já existe');
-      }
-
-      // Criptografar senha
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-      // Inserir usuário
-      const result = await pool.query(
-        'INSERT INTO users (name, username, email, password, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, username, email, role, created_at',
-        [name, username, email, hashedPassword, role]
-      );
-
-      return result.rows[0];
-    } catch (err) {
-      console.error('Erro ao criar usuário:', err);
-      throw err;
+    // Buscar usuário por ID
+    static async findById(id) {
+        try {
+            const result = await pool.query(
+                'SELECT id, name, username, email, status, created_at FROM users WHERE id = $1',
+                [id]
+            );
+            return result.rows[0] || null;
+        } catch (err) {
+            console.error('Erro ao buscar usuário por ID:', err);
+            throw err;
+        }
     }
-  }
 
-  // Verificar senha
-  static async verifyPassword(plainPassword, hashedPassword) {
-    try {
-      return await bcrypt.compare(plainPassword, hashedPassword);
-    } catch (err) {
-      console.error('Erro ao verificar senha:', err);
-      throw err;
-    }
-  }
+    // Criar novo usuário
+    // models/User.js — trecho do create
+    static async create(userData) {
+        const { name, username, email, password, status = 1 } = userData;
+        if (!password) throw new Error('Senha é obrigatória');
 
-  // Atualizar usuário
-  static async update(id, userData) {
-    const { name, username, email, role } = userData;
-    
-    try {
-      const result = await pool.query(
-        'UPDATE users SET name = $1, username = $2, email = $3, role = $4 WHERE id = $5 RETURNING id, name, username, email, role, created_at',
-        [name, username, email, role, id]
-      );
-      return result.rows[0] || null;
-    } catch (err) {
-      console.error('Erro ao atualizar usuário:', err);
-      throw err;
-    }
-  }
+        const existing = await this.findByEmail(email);
 
-  // Deletar usuário
-  static async delete(id) {
-    try {
-      const result = await pool.query(
-        'DELETE FROM users WHERE id = $1 RETURNING id',
-        [id]
-      );
-      return result.rows[0] || null;
-    } catch (err) {
-      console.error('Erro ao deletar usuário:', err);
-      throw err;
+        if (existing) throw new Error('Usuário já existe');
+
+        const hashed = await bcrypt.hash(password, 10);
+        
+        const result = await pool.query(
+            'INSERT INTO users (name, username, email, password, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [name, username, email, hashed, status]
+        );
+        return result.rows[0];
     }
-  }
+
+    // Verificar senha
+    static async verifyPassword(plainPassword, hashedPassword) {
+        try {
+            return await bcrypt.compare(plainPassword, hashedPassword);
+        } catch (err) {
+            console.error('Erro ao verificar senha:', err);
+            throw err;
+        }
+    }
+
+    // Atualizar usuário
+    static async update(id, userData) {
+        const { name, username, email, password, status } = userData;
+
+        try {
+            let query = 'UPDATE users SET ';
+            const sets = [];
+            const values = [];
+
+            if (name !== undefined) {
+                sets.push(`name = $${sets.length + 1}`);
+                values.push(name);
+            }
+            if (username !== undefined) {
+                sets.push(`username = $${sets.length + 1}`);
+                values.push(username);
+            }
+            if (email !== undefined) {
+                sets.push(`email = $${sets.length + 1}`);
+                values.push(email);
+            }
+            if (password !== undefined) {
+                const hashed = await bcrypt.hash(password, 10);
+                sets.push(`password = $${sets.length + 1}`);
+                values.push(hashed);
+            }
+            if (status !== undefined) {
+                sets.push(`status = $${sets.length + 1}`);
+                values.push(status);
+            }
+
+            sets.push('updated_at = NOW()');
+            values.push(id);
+
+            query += sets.join(', ') + ` WHERE id = $${values.length} RETURNING *`;
+
+            const result = await pool.query(query, values);
+            return result.rows[0] || null;
+        } catch (err) {
+            console.error('Erro ao atualizar usuário:', err);
+            throw err;
+        }
+    }
+
+    // Deletar usuário (soft delete opcional, mas aqui é hard delete)
+    static async delete(id) {
+        try {
+            const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
+            return result.rows[0] || null;
+        } catch (err) {
+            console.error('Erro ao deletar usuário:', err);
+            throw err;
+        }
+    }
 }
 
 export default User;

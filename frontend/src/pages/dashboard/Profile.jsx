@@ -1,28 +1,58 @@
-import { Button, Card, Col, Container, Form, Row } from 'react-bootstrap'
-import { useAuth } from '../../context/AuthContext'
-import { useState } from 'react'
+// src/pages/dashboard/Profile.jsx
+import { Button, Card, Col, Container, Form, Row } from 'react-bootstrap';
+import { useAuth } from '../../context/AuthContext';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    username: user?.username || '',
-    email: user?.email || ''
-  })
+    name: '',
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        username: user.username || '',
+        email: user.email || '',
+        password: '',
+        confirmPassword: ''
+      });
+    } 
+  }, [user]);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
-  }
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    // In a real application, you would update the user profile here
-    console.log('Updating profile:', formData)
-    alert('Perfil atualizado com sucesso!')
-  }
+    e.preventDefault();
+    if (formData.password && formData.password !== formData.confirmPassword) {
+      alert('As senhas não coincidem.');
+      return;
+    }
+
+    const updateData = { name: formData.name, username: formData.username, email: formData.email };
+    if (formData.password) updateData.password = formData.password;
+
+    const result = await updateUser(updateData);
+    if (result.success) {
+      alert('Perfil atualizado com sucesso!');
+      navigate('/dashboard'); // redireciona após salvar
+    } else {
+      alert('Erro: ' + result.message);
+    }
+  };
+
+  const handleCancel = () => {
+    navigate('/dashboard');
+  };
 
   return (
     <div className="py-4">
@@ -48,6 +78,7 @@ const Profile = () => {
                           name="name"
                           value={formData.name}
                           onChange={handleChange}
+                          required
                         />
                       </Form.Group>
                     </Col>
@@ -59,6 +90,7 @@ const Profile = () => {
                           name="username"
                           value={formData.username}
                           onChange={handleChange}
+                          required
                         />
                       </Form.Group>
                     </Col>
@@ -71,14 +103,17 @@ const Profile = () => {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
+                      required
                     />
                   </Form.Group>
 
                   <Form.Group className="mb-3">
-                    <Form.Label>Senha</Form.Label>
+                    <Form.Label>Nova Senha (opcional)</Form.Label>
                     <Form.Control
                       type="password"
-                      placeholder="Deixe em branco para manter a senha atual"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
                     />
                   </Form.Group>
 
@@ -86,55 +121,28 @@ const Profile = () => {
                     <Form.Label>Confirmar Nova Senha</Form.Label>
                     <Form.Control
                       type="password"
-                      placeholder="Deixe em branco para manter a senha atual"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
                     />
                   </Form.Group>
 
                   <div className="d-flex gap-2">
                     <Button variant="primary" type="submit">
-                      <i className="bi bi-save me-2"></i>
-                      Salvar Alterações
+                      <i className="bi bi-save me-2"></i>Salvar Alterações
                     </Button>
-                    <Button variant="outline-secondary">
-                      <i className="bi bi-x-circle me-2"></i>
-                      Cancelar
+                    <Button variant="secondary" onClick={handleCancel}>
+                      <i className="bi bi-x-circle me-2"></i>Cancelar
                     </Button>
                   </div>
                 </Form>
               </Card.Body>
             </Card>
           </Col>
-
-          <Col lg={4}>
-            <Card>
-              <Card.Body className="text-center">
-                <div className="mb-3">
-                  <div className="bg-light rounded-circle d-inline-flex align-items-center justify-content-center" style={{ width: '100px', height: '100px' }}>
-                    <i className="bi bi-person-fill" style={{ fontSize: '3rem' }}></i>
-                  </div>
-                </div>
-                <h5>{user?.name}</h5>
-                <p className="text-muted mb-3">{user?.email}</p>
-                <Button variant="outline-primary" size="sm">
-                  <i className="bi bi-camera me-2"></i>
-                  Alterar Foto
-                </Button>
-              </Card.Body>
-            </Card>
-
-            <Card className="mt-4">
-              <Card.Body>
-                <Card.Title>Informações da Conta</Card.Title>
-                <p><strong>ID:</strong> {user?.id}</p>
-                <p><strong>Membro desde:</strong> {user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : 'N/A'}</p>
-                <p><strong>Último acesso:</strong> Hoje</p>
-              </Card.Body>
-            </Card>
-          </Col>
         </Row>
       </Container>
     </div>
-  )
-}
+  );
+};
 
-export default Profile
+export default Profile;
