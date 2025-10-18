@@ -78,16 +78,6 @@ pm2 start npm --name react-login-frontend -- run dev
 cd /mnt/d/myProjects/web-apps/js/react/react-login/backend
 pm2 start npm --name react-login-backend -- run dev
 ```
-
-### Opção B — usando --prefix (sem cd)
-
-```bash
-pm2 start npm --name react-login-v2-frontend --prefix /mnt/d/.../react-login-v2/frontend -- run dev
-pm2 start npm --name react-login-v2-backend  --prefix /mnt/d/.../react-login-v2/backend  -- run dev
-```
-
-> Observação: o `--prefix` funciona, mas tome cuidado com scripts que tentem acessar pastas relativas (ex.: um `concurrently` que invoque `frontend`/`backend` a partir de outro cwd pode gerar `ENOENT`).
-
 ## Salvar e reiniciar o pm2 ao fechar o WSL
 ```bash
 pm2 save # opcional usar --force

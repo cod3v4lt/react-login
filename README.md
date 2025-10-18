@@ -100,7 +100,7 @@ react-auth-app/
    POSTGRES_PASSWORD=sua_senha_do_postgres
    POSTGRES_NAME=react_auth_db
    JWT_SECRET=sua_chave_secreta_jwt
-   PORT=5004
+   PORT=5003
    ```
 
    E na pasta `frontend/`, crie um arquivo `.env`:
