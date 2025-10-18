@@ -1,9 +1,7 @@
-// models/User.js
 import pool from '../config/database.js';
 import bcrypt from 'bcryptjs';
 
 class User {
-    // Buscar todos os usuários
     static async findAll() {
         try {
             const result = await pool.query(
@@ -15,7 +13,33 @@ class User {
             throw err;
         }
     }
-    // Buscar usuário por email
+
+    static async countAll() {
+        try {
+            const result = await pool.query('SELECT COUNT(*) FROM users');
+            return result.rows;
+        } catch (err) {
+            console.error('Erro ao contar usuários:', err);
+            throw err;
+        }
+    }
+
+    static async findPaginated(limit = 5, offset = 0) {
+        try {
+            const result = await pool.query(
+                `SELECT id, name, username, email, status, created_at
+                 FROM users
+                 ORDER BY created_at DESC
+                 LIMIT $1 OFFSET $2`,
+                [limit, offset]
+            );
+            return result.rows;
+        } catch (err) {
+            console.error('Erro ao buscar usuários paginados:', err);
+            throw err;
+        }
+    }
+
     static async findByEmail(email) {
         try {
             const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
@@ -26,7 +50,6 @@ class User {
         }
     }
 
-    // Buscar usuário por ID
     static async findById(id) {
         try {
             const result = await pool.query(
@@ -40,18 +63,14 @@ class User {
         }
     }
 
-    // Criar novo usuário
-    // models/User.js — trecho do create
     static async create(userData) {
         const { name, username, email, password, status = 1 } = userData;
         if (!password) throw new Error('Senha é obrigatória');
 
         const existing = await this.findByEmail(email);
-
         if (existing) throw new Error('Usuário já existe');
 
         const hashed = await bcrypt.hash(password, 10);
-        
         const result = await pool.query(
             'INSERT INTO users (name, username, email, password, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
             [name, username, email, hashed, status]
@@ -59,7 +78,6 @@ class User {
         return result.rows[0];
     }
 
-    // Verificar senha
     static async verifyPassword(plainPassword, hashedPassword) {
         try {
             return await bcrypt.compare(plainPassword, hashedPassword);
@@ -69,7 +87,6 @@ class User {
         }
     }
 
-    // Atualizar usuário
     static async update(id, userData) {
         const { name, username, email, password, status } = userData;
 
@@ -113,7 +130,6 @@ class User {
         }
     }
 
-    // Deletar usuário (soft delete opcional, mas aqui é hard delete)
     static async delete(id) {
         try {
             const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
